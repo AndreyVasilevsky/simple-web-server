@@ -1,0 +1,14 @@
+node_modules/
+server.log
+*.log
+
+# SSL certificates (sensitive)
+ssl/*.pem
+
+# Uploads folder content (user files)
+uploads/*
+!uploads/.gitkeep
+
+# OS specific
+.DS_Store
+Thumbs.db

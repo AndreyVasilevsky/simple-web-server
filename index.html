@@ -58,10 +58,10 @@
             gap: 20px;
         }
         
-        @media (min-width: 768px) {
-            .container {
+        @media (min-width: 480px) {
+            /* .container {
                 grid-template-columns: 1fr 1fr;
-            }
+            } */
         }
         
         .card {
@@ -467,27 +467,24 @@
                 
                 fileList.innerHTML = '';
                 
-                files.forEach(file => {
+                files.forEach(fileObj => {
                     const fileCard = document.createElement('div');
                     fileCard.className = 'file-card';
-                    
-                    const icon = getFileIcon(file);
-                    
+                    const icon = fileObj.type === 'directory' ? 'fas fa-folder' : getFileIcon(fileObj.name);
                     fileCard.innerHTML = `
                         <i class="${icon} file-icon"></i>
-                        <a href="/uploads/${encodeURIComponent(file)}" class="file-link" target="_blank" title="${file}">
-                            ${file}
+                        <a href="/uploads/${encodeURIComponent(fileObj.name)}" class="file-link" target="_blank" title="${fileObj.name}">
+                            ${fileObj.name}
                         </a>
                         <div class="file-actions">
-                            <button class="action-btn copy-btn" title="Copy path" data-path="/uploads/${encodeURIComponent(file)}">
+                            <button class="action-btn copy-btn" title="Copy path" data-path="/uploads/${encodeURIComponent(fileObj.name)}">
                                 <i class="fas fa-copy"></i>
                             </button>
-                            <button class="action-btn delete-btn" title="Delete file" data-filename="${file}">
+                            <button class="action-btn delete-btn" title="Delete file" data-filename="${fileObj.name}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     `;
-                    
                     fileList.appendChild(fileCard);
                 });
             } catch (error) {

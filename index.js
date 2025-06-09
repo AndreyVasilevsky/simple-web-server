@@ -6,9 +6,24 @@ const https = require('https');
 const http = require('http');
 
 const app = express();
-const PORT = 80;
-const HTTPS_PORT = 443;
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const PORT = process.env.PORT || 3000; // Use 3000 as default but allow env variable override
+const HTTPS_PORT = process.env.HTTPS_PORT || 443;
+const UPLOADS_DIR = '/root';
+
+// Trust proxy when behind nginx
+app.set('trust proxy', true);
+
+// Add CORS headers for nginx proxy (only once)
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(204);
+    }
+    next();
+});
 
 // Ensure uploads directory exists
 if (!fs.existsSync(UPLOADS_DIR)) {
@@ -58,34 +73,49 @@ app.post('/upload', upload.single('file'), (req, res) => {
     res.send('File uploaded successfully.');
 });
 
-// List uploaded files
+// List uploaded files (hide dotfiles)
 app.get('/files', (req, res) => {
-    fs.readdir(UPLOADS_DIR, (err, files) => {
+    fs.readdir(UPLOADS_DIR, { withFileTypes: true }, (err, files) => {
         if (err) {
             return res.status(500).json({ error: 'Unable to list files.' });
         }
-        res.json(files);
+        // Filter out dotfiles and return type info
+        const visibleFiles = files
+            .filter(f => !f.name.startsWith('.'))
+            .map(f => ({ name: f.name, type: f.isDirectory() ? 'directory' : 'file' }));
+        res.json(visibleFiles);
     });
 });
 
-// Delete file endpoint
+// Delete file or empty directory endpoint
 app.delete('/file/:filename', (req, res) => {
     const filename = req.params.filename;
     const filePath = path.join(UPLOADS_DIR, filename);
-    
+
     // Check if file exists
-    fs.access(filePath, fs.constants.F_OK, (err) => {
+    fs.stat(filePath, (err, stats) => {
         if (err) {
-            return res.status(404).json({ error: 'File not found.' });
+            return res.status(404).json({ error: 'File or directory not found.' });
         }
-        
-        // Delete the file
-        fs.unlink(filePath, (err) => {
-            if (err) {
-                return res.status(500).json({ error: 'Failed to delete file.' });
-            }
-            res.json({ success: true, message: 'File deleted successfully.' });
-        });
+        if (stats.isFile()) {
+            // Delete file
+            fs.unlink(filePath, (err) => {
+                if (err) {
+                    return res.status(500).json({ error: 'Failed to delete file.' });
+                }
+                res.json({ success: true, message: 'File deleted successfully.' });
+            });
+        } else if (stats.isDirectory()) {
+            // Delete directory recursively (CAUTION: this will delete all contents)
+            fs.rm(filePath, { recursive: true, force: true }, (err) => {
+                if (err) {
+                    return res.status(500).json({ error: 'Failed to delete directory.' });
+                }
+                res.json({ success: true, message: 'Directory deleted successfully.' });
+            });
+        } else {
+            res.status(400).json({ error: 'Not a file or directory.' });
+        }
     });
 });
 

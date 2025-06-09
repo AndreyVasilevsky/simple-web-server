@@ -3,8 +3,8 @@ Description=File Upload Webserver
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/node /home/certification/webserver/index.js
-WorkingDirectory=/home/certification/webserver
+ExecStart=/usr/bin/node /root/simple-web-server/index.js
+WorkingDirectory=/root/simple-web-server
 Restart=always
 RestartSec=10
 StandardOutput=syslog
